@@ -2,73 +2,131 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Cricket Card Game</title>
+<title>Low Card Game</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-body{font-family:Inter,system-ui;background:#0b132b;color:#fff;display:flex;flex-direction:column;align-items:center;padding:18px}
-#chat{width:100%;max-width:720px;background:#111827;border-radius:8px;padding:12px;min-height:320px;overflow:auto}
-#controls{margin-top:12px;display:flex;gap:8px;align-items:center;}
-input{padding:10px;border-radius:6px;border:1px solid #24303f;background:#0b1220;color:#fff}
-button{padding:10px 14px;border-radius:6px;border:none;background:#1f6feb;color:#fff;cursor:pointer}
-.msg{margin-bottom:6px}
-#players{margin-top:10px;font-size:14px;color:#cbd5e1}
+body{
+  font-family:Inter,system-ui;
+  background:#0b132b;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:18px;
+}
+#chat{
+  width:100%;
+  max-width:720px;
+  background:#111827;
+  border-radius:8px;
+  padding:12px;
+  min-height:320px;
+  overflow:auto;
+}
+#controls, #controls2{
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+input{
+  padding:10px;
+  border-radius:6px;
+  border:1px solid #24303f;
+  background:#0b1220;
+  color:#fff;
+}
+button{
+  padding:10px 14px;
+  border-radius:6px;
+  border:none;
+  background:#1f6feb;
+  color:#fff;
+  cursor:pointer;
+}
+.msg{
+  margin-bottom:6px;
+}
+#players{
+  margin-top:10px;
+  font-size:14px;
+  color:#cbd5e1;
+}
 </style>
 </head>
 <body>
-<h1>🏏 Cricket Card Game</h1>
+<h1>🏏 Low Card Game</h1>
 <div id="chat"></div>
 <div id="players"></div>
 
+<!-- Username input (one-time) -->
 <div id="controls">
-<input id="nameInput" placeholder="Enter temporary username"/>
-<button id="setNameBtn">Set Name</button>
+  <input id="nameInput" placeholder="Enter temporary username"/>
+  <button id="setNameBtn">Set Name</button>
 </div>
 
-<div id="controls2" style="margin-top:8px;">
-<input id="msgInput" placeholder="Type !start, !j, !d or chat" style="width:60%"/>
-<button id="sendBtn">Send</button>
+<!-- Chat/game commands -->
+<div id="controls2">
+  <input id="msgInput" placeholder="Type !start, !j, !d or chat" style="width:60%"/>
+  <button id="sendBtn">Send</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket=io();
-const chat=document.getElementById("chat");
-const playersDiv=document.getElementById("players");
-const nameInput=document.getElementById("nameInput");
-const setNameBtn=document.getElementById("setNameBtn");
-const msgInput=document.getElementById("msgInput");
-const sendBtn=document.getElementById("sendBtn");
+const socket = io();
+const chat = document.getElementById("chat");
+const playersDiv = document.getElementById("players");
+const nameInput = document.getElementById("nameInput");
+const setNameBtn = document.getElementById("setNameBtn");
+const msgInput = document.getElementById("msgInput");
+const sendBtn = document.getElementById("sendBtn");
+const controlsDiv = document.getElementById("controls");
+const controls2Div = document.getElementById("controls2");
 
+let usernameSet = false;
+
+// Add message to chat
 function addMsg(text){
-  const d=document.createElement("div");
-  d.className="msg";
-  d.textContent=text;
+  const d = document.createElement("div");
+  d.className = "msg";
+  d.textContent = text;
   chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
+  chat.scrollTop = chat.scrollHeight;
 }
 
-setNameBtn.onclick=()=>{
-  const name=nameInput.value.trim();
-  if(!name){alert("Enter name");return;}
-  socket.emit("setName",name);
-  addMsg("✅ You set your name to: "+name);
-  nameInput.value="";
+// Set username (only once)
+setNameBtn.onclick = () => {
+  if(usernameSet) return;
+  const name = nameInput.value.trim();
+  if(!name){ alert("Enter a name"); return; }
+  socket.emit("setName", name);
+  addMsg("✅ You set your name to: " + name);
+  usernameSet = true;
+  controlsDiv.style.display = "none"; // hide username input
+  controls2Div.style.display = "flex"; // show chat/game input
 };
 
-sendBtn.onclick=sendMsg;
-msgInput.addEventListener("keydown",(e)=>{if(e.key==="Enter") sendMsg();});
+// Send chat or game command
+sendBtn.onclick = sendMsg;
+msgInput.addEventListener("keydown", (e) => { if(e.key==="Enter") sendMsg(); });
 
 function sendMsg(){
-  const text=msgInput.value.trim();
-  if(!text)return;
-  socket.emit("chat",text);
-  msgInput.value="";
+  const text = msgInput.value.trim();
+  if(!text) return;
+  socket.emit("chat", text);
+  msgInput.value = "";
 }
 
-socket.on("message",m=>addMsg(m));
-socket.on("players",list=>{
-  playersDiv.innerHTML="<strong>Players:</strong> "+list.map(p=>p.alive?p.name:p.name+" (out)").join(", ");
+// Listen for server messages
+socket.on("message", m => addMsg(m));
+
+// Update player list
+socket.on("players", list => {
+  playersDiv.innerHTML = "<strong>Players:</strong> " + list.map(p => p.alive ? p.name : p.name + " (out)").join(", ");
 });
+
+// Initially hide chat/game input until name is set
+controls2Div.style.display = "none";
 </script>
 </body>
 </html>
